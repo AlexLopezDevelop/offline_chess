@@ -13,8 +13,10 @@ class GameBoard extends StatefulWidget {
 }
 
 class _GameBoardState extends State<GameBoard> {
-
   late List<List<ChessPiece?>> board;
+  ChessPiece? selectedPiece;
+  int selectedPieceRow = -1;
+  int selectedPieceCol = -1;
 
   @override
   void initState() {
@@ -115,6 +117,16 @@ class _GameBoardState extends State<GameBoard> {
     board = tempBoard;
   }
 
+  void _selectPiece(int row, int col) {
+    setState(() {
+      if (board[row][col] != null) {
+        selectedPiece = board[row][col];
+        selectedPieceRow = row;
+        selectedPieceCol = col;
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -125,12 +137,18 @@ class _GameBoardState extends State<GameBoard> {
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 8),
             itemBuilder: (context, index) {
-
               int row = index ~/ kBoardWidth;
               int col = index % kBoardWidth;
+              bool isSelected =
+                  selectedPieceRow == row && selectedPieceCol == col;
 
               return Center(
-                child: Square(index: index, piece: board[row][col]),
+                child: Square(
+                  index: index,
+                  piece: board[row][col],
+                  isSelected: isSelected,
+                  onTap: () => _selectPiece(row, col),
+                ),
               );
             }));
   }
