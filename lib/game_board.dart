@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:offlinechess/components/dead_piece.dart';
 import 'package:offlinechess/components/piece.dart';
 import 'package:offlinechess/components/square.dart';
 import 'package:offlinechess/helper/movements.dart';
@@ -22,6 +23,18 @@ class _GameBoardState extends State<GameBoard> {
   // list of a valids moves for the selected piece
   // each move is represented as a list of two elements row and col
   List<List<int>> validMoves = [];
+
+  // a list of white and black pieces that have been captured
+  List<ChessPiece> whiteCapturedPieces = [];
+  List<ChessPiece> blackCapturedPieces = [];
+
+  // a boolean to keep track of whose turn it is
+  bool isWhiteTurn = true;
+
+  // initial position of king (keep track of this to make it easier later to see if king is in check)
+  List<int> whiteKingPosition = [7, 4];
+  List<int> blackKingPosition = [0, 4];
+  bool checkStatus = false;
 
   @override
   void initState() {
@@ -126,11 +139,11 @@ class _GameBoardState extends State<GameBoard> {
     setState(() {
       // no piece selected yet, this is the first selection
       if (selectedPiece == null && board[row][col] != null) {
-        selectedPiece = board[row][col];
-        selectedPieceRow = row;
-        selectedPieceCol = col;
-        validMoves = _calculateValidMoves(
-            col: selectedPieceCol, row: selectedPieceRow, piece: selectedPiece);
+        if (board[row][col]!.isWhite == isWhiteTurn) {
+          selectedPiece = board[row][col];
+          selectedPieceRow = row;
+          selectedPieceCol = col;
+        }
       } else if (board[row][col] != null &&
           board[row][col]!.isWhite == selectedPiece!.isWhite) {
         selectedPiece = board[row][col];
@@ -141,12 +154,12 @@ class _GameBoardState extends State<GameBoard> {
         _movePiece(row, col);
       }
 
-      validMoves = _calculateValidMoves(
-          col: selectedPieceCol, row: selectedPieceRow, piece: selectedPiece);
+      validMoves = _calculateRealValidMoves(
+          col: selectedPieceCol, row: selectedPieceRow, piece: selectedPiece!, checkSimulation: true);
     });
   }
 
-  List<List<int>> _calculateValidMoves(
+  List<List<int>> _calculateRawValidMoves(
       {required int row, required int col, required ChessPiece? piece}) {
     List<List<int>> validMoves = [];
 
@@ -176,12 +189,12 @@ class _GameBoardState extends State<GameBoard> {
         // pawn can kill diagonally
         if (isInBoard(row + direction, col - 1) &&
             board[row + direction][col - 1] != null &&
-            board[row + direction][col - 1]!.isWhite) {
+            board[row + direction][col - 1]!.isWhite != piece.isWhite) {
           validMoves.add([row + direction, col - 1]);
         }
         if (isInBoard(row + direction, col + 1) &&
             board[row + direction][col + 1] != null &&
-            !board[row + direction][col + 1]!.isWhite) {
+            !board[row + direction][col + 1]!.isWhite != piece.isWhite) {
           validMoves.add([row + direction, col + 1]);
         }
         break;
@@ -331,9 +344,57 @@ class _GameBoardState extends State<GameBoard> {
     return validMoves;
   }
 
+  List<List<int>> _calculateRealValidMoves({
+      required int row, required int col, required ChessPiece piece, required bool checkSimulation}) {
+    List<List<int>> realValidMoves = [];
+    List<List<int>> candidatesMoves =
+        _calculateRawValidMoves(row: row, col: col, piece: piece);
+
+    if (checkSimulation) {
+      for (var candidateMove in candidatesMoves) {
+        final endRow = candidateMove[0];
+        final endCol = candidateMove[1];
+
+        if (simulateMoveIsSafe(piece, row, col, endRow, endCol)) {
+          realValidMoves.add(candidateMove);
+        }
+      }
+    } else {
+      realValidMoves = candidatesMoves;
+    }
+
+    return realValidMoves;
+  }
+
   void _movePiece(int newRow, int newCol) {
+    // if new spot has an enemy piece
+    if (board[newRow][newCol] != null) {
+      final capturedPiece = board[newRow][newCol];
+      if (capturedPiece!.isWhite) {
+        whiteCapturedPieces.add(capturedPiece);
+      } else {
+        blackCapturedPieces.add(capturedPiece);
+      }
+    }
+
+    // check if the piece begin moved is a king
+    if (selectedPiece!.type == ChessPieceType.king) {
+      if (selectedPiece!.isWhite) {
+        whiteKingPosition = [newRow, newCol];
+      } else {
+        blackKingPosition = [newRow, newCol];
+      }
+    }
+
     board[newRow][newCol] = selectedPiece;
     board[selectedPieceRow][selectedPieceCol] = null;
+
+    // see if kings are in check
+    if (_isKingInCheck(isWhiteTurn)) {
+      checkStatus = true;
+    } else {
+      checkStatus = false;
+    }
 
     // clear selection
     setState(() {
@@ -342,41 +403,191 @@ class _GameBoardState extends State<GameBoard> {
       selectedPieceCol = -1;
       validMoves = [];
     });
+
+    // check if it is checkmate
+    if (isCheckMate(!isWhiteTurn)) {
+      showDialog(context: context, builder: (context) => AlertDialog(
+        title: const Text('Checkmate!'),
+        content: Text('Winner is ${isWhiteTurn ? 'Black' : 'White'}'),
+        actions: [
+          TextButton(onPressed: () {
+            Navigator.of(context).pop();
+            resetBoard();
+          }, child: const Text('Play Again'))
+        ],
+      ));
+    }
+
+    // change turn
+    isWhiteTurn = !isWhiteTurn;
+  }
+
+  bool _isKingInCheck(bool isWhiteKing) {
+    List<int> kingPosition =
+        isWhiteKing ? whiteKingPosition : blackKingPosition;
+
+    // check if any enemy piece can kill king
+    for (var row = 0; row < kBoardWidth; row++) {
+      for (var col = 0; col < kBoardWidth; col++) {
+        if (board[row][col] == null ||
+            board[row][col]!.isWhite != isWhiteKing) {
+          continue;
+        }
+
+        List<List<int>> moves = _calculateRealValidMoves(
+            row: row, col: col, piece: board[row][col]!, checkSimulation: false);
+
+        // check if the king position is in this piece valid moves
+        if (moves.any((element) =>
+            element[0] == kingPosition[0] && element[1] == kingPosition[1])) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  bool simulateMoveIsSafe(ChessPiece piece, int startRow, int startCol, int endRow, int endCol) {
+    // save current the current board state
+    ChessPiece? originalPiece = board[endRow][endCol];
+
+    List<int>? originalKingPosition;
+
+    // if the piece is the king, save it's position and update new one
+    if (piece.type == ChessPieceType.king) {
+      originalKingPosition =
+      piece.isWhite ? whiteKingPosition : blackKingPosition;
+
+      // update king position
+      if (piece.isWhite) {
+        whiteKingPosition = [endRow, endCol];
+      } else {
+        blackKingPosition = [endRow, endCol];
+      }
+    }
+
+      // simulate move
+      board[endRow][endCol] = piece;
+      board[startRow][startCol] = null;
+
+      // check if our king is under attack
+      bool kingInCheck = _isKingInCheck(piece.isWhite);
+
+      // restore board to original state
+      board[startRow][startCol] = piece;
+      board[endRow][endCol] = originalPiece;
+
+      // if the piece was the king, restore it original position
+      if (piece.type == ChessPieceType.king) {
+        if (piece.isWhite) {
+          whiteKingPosition = originalKingPosition!;
+        } else {
+          blackKingPosition = originalKingPosition!;
+        }
+      }
+
+    return !kingInCheck;
+  }
+
+  bool isCheckMate(bool isWhiteKing) {
+    if (!_isKingInCheck(isWhiteKing)) {
+      return false;
+    }
+
+    // if there at least one move that is safe, it's not checkmate
+    for (int i = 0; i < kBoardWidth; i++) {
+      for (int j = 0; j < kBoardWidth; j++) {
+        if (board[i][j] == null || board[i][j]!.isWhite != isWhiteKing) {
+          continue;
+        }
+
+        List<List<int>> moves = _calculateRealValidMoves(
+            row: i, col: j, piece: board[i][j]!, checkSimulation: true);
+
+        if (moves.isNotEmpty) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  void resetBoard() {
+    _initBoard();
+    checkStatus = false;
+    whiteCapturedPieces.clear();
+    blackCapturedPieces.clear();
+    whiteKingPosition = [0, 4];
+    blackKingPosition = [7, 4];
+    isWhiteTurn = true;
+    setState(() {
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
         backgroundColor: kBackgroundColor,
-        body: GridView.builder(
-            itemCount: kBoardWidth * kBoardWidth,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 8),
-            itemBuilder: (context, index) {
-              int row = index ~/ kBoardWidth;
-              int col = index % kBoardWidth;
-              bool isSelected =
-                  selectedPieceRow == row && selectedPieceCol == col;
+        body: Column(
+          children: [
+            // white pieces taken
+            Expanded(
+                child: GridView.builder(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 8),
+                    itemCount: whiteCapturedPieces.length,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemBuilder: (context, index) => DeadPiece(
+                          imagePath: whiteCapturedPieces[index].imagePath,
+                          isWhite: true,
+                        ))),
+            Text(checkStatus ? 'Check!' : ''),
+            Expanded(
+              flex: 3,
+              child: GridView.builder(
+                  itemCount: kBoardWidth * kBoardWidth,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 8),
+                  itemBuilder: (context, index) {
+                    int row = index ~/ kBoardWidth;
+                    int col = index % kBoardWidth;
+                    bool isSelected =
+                        selectedPieceRow == row && selectedPieceCol == col;
 
-              // check if square is a valid move
-              bool isValidMove = false;
-              for (var position in validMoves) {
-                if (position[0] == row && position[1] == col) {
-                  isValidMove = true;
-                  break;
-                }
-              }
+                    // check if square is a valid move
+                    bool isValidMove = false;
+                    for (var position in validMoves) {
+                      if (position[0] == row && position[1] == col) {
+                        isValidMove = true;
+                        break;
+                      }
+                    }
 
-              return Center(
-                child: Square(
-                  index: index,
-                  piece: board[row][col],
-                  isSelected: isSelected,
-                  isValidMove: isValidMove,
-                  onTap: () => _selectPiece(row, col),
-                ),
-              );
-            }));
+                    return Center(
+                      child: Square(
+                        index: index,
+                        piece: board[row][col],
+                        isSelected: isSelected,
+                        isValidMove: isValidMove,
+                        onTap: () => _selectPiece(row, col),
+                      ),
+                    );
+                  }),
+            ),
+            Expanded(
+                child: GridView.builder(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 8),
+                    itemCount: blackCapturedPieces.length,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemBuilder: (context, index) => DeadPiece(
+                          imagePath: blackCapturedPieces[index].imagePath,
+                          isWhite: false,
+                        ))),
+          ],
+        ));
   }
 }
