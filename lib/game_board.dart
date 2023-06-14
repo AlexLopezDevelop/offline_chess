@@ -124,7 +124,15 @@ class _GameBoardState extends State<GameBoard> {
 
   void _selectPiece(int row, int col) {
     setState(() {
-      if (board[row][col] != null) {
+      // no piece selected yet, this is the first selection
+      if (selectedPiece == null && board[row][col] != null) {
+        selectedPiece = board[row][col];
+        selectedPieceRow = row;
+        selectedPieceCol = col;
+        validMoves = _calculateValidMoves(
+            col: selectedPieceCol, row: selectedPieceRow, piece: selectedPiece);
+      } else if (board[row][col] != null &&
+          board[row][col]!.isWhite == selectedPiece!.isWhite) {
         selectedPiece = board[row][col];
         selectedPieceRow = row;
         selectedPieceCol = col;
@@ -151,14 +159,16 @@ class _GameBoardState extends State<GameBoard> {
     switch (piece.type) {
       case ChessPieceType.pawn:
         // pawn can move forward if the square is empty
-        if (isInBoard(row + direction, col) && board[row + direction][col] == null) {
+        if (isInBoard(row + direction, col) &&
+            board[row + direction][col] == null) {
           validMoves.add([row + direction, col]);
         }
 
         //pawn can move two squares forward if it is in its starting position
         if ((row == 1 && !piece.isWhite) || (row == 6 && piece.isWhite)) {
           if (isInBoard(row + 2 * direction, col) &&
-              board[row + 2 * direction][col] == null && board[row + direction][col] == null) {
+              board[row + 2 * direction][col] == null &&
+              board[row + direction][col] == null) {
             validMoves.add([row + 2 * direction, col]);
           }
         }
@@ -178,10 +188,10 @@ class _GameBoardState extends State<GameBoard> {
       case ChessPieceType.rook:
         // horizontal and vertical directions
         final directions = [
-          [-1,0], // up
-          [1,0], // down
-          [0,-1], // left
-          [0,1], // right
+          [-1, 0], // up
+          [1, 0], // down
+          [0, -1], // left
+          [0, 1], // right
         ];
 
         for (var direction in directions) {
@@ -221,7 +231,7 @@ class _GameBoardState extends State<GameBoard> {
             continue;
           }
           if (board[newRow][newCol] != null) {
-            if(board[newRow][newCol]!.isWhite != piece.isWhite) {
+            if (board[newRow][newCol]!.isWhite != piece.isWhite) {
               validMoves.add([newRow, newCol]); // kill
             }
             continue; // blocked
@@ -232,10 +242,10 @@ class _GameBoardState extends State<GameBoard> {
       case ChessPieceType.bishop:
         // diagonal directions
         final directions = [
-          [-1,-1], // up left
-          [-1,1], // up right
-          [1,-1], // down left
-          [1,1], // down right
+          [-1, -1], // up left
+          [-1, 1], // up right
+          [1, -1], // down left
+          [1, 1], // down right
         ];
 
         for (var direction in directions) {
@@ -247,7 +257,7 @@ class _GameBoardState extends State<GameBoard> {
               break;
             }
             if (board[newRow][newCol] != null) {
-              if(board[newRow][newCol]!.isWhite != piece.isWhite) {
+              if (board[newRow][newCol]!.isWhite != piece.isWhite) {
                 validMoves.add([newRow, newCol]); // kill
               }
               break; // blocked
@@ -260,14 +270,14 @@ class _GameBoardState extends State<GameBoard> {
       case ChessPieceType.queen:
         // all 8 directions
         final directions = [
-          [-1,0], // up
-          [1,0], // down
-          [0,-1], // left
-          [0,1], // right
-          [-1,-1], // up left
-          [-1,1], // up right
-          [1,-1], // down left
-          [1,1], // down right
+          [-1, 0], // up
+          [1, 0], // down
+          [0, -1], // left
+          [0, 1], // right
+          [-1, -1], // up left
+          [-1, 1], // up right
+          [1, -1], // down left
+          [1, 1], // down right
         ];
 
         for (var direction in directions) {
@@ -279,7 +289,7 @@ class _GameBoardState extends State<GameBoard> {
               break;
             }
             if (board[newRow][newCol] != null) {
-              if(board[newRow][newCol]!.isWhite != piece.isWhite) {
+              if (board[newRow][newCol]!.isWhite != piece.isWhite) {
                 validMoves.add([newRow, newCol]); // kill
               }
               break; // blocked
@@ -292,14 +302,14 @@ class _GameBoardState extends State<GameBoard> {
       case ChessPieceType.king:
         // all 8 directions
         final directions = [
-          [-1,0], // up
-          [1,0], // down
-          [0,-1], // left
-          [0,1], // right
-          [-1,-1], // up left
-          [-1,1], // up right
-          [1,-1], // down left
-          [1,1], // down right
+          [-1, 0], // up
+          [1, 0], // down
+          [0, -1], // left
+          [0, 1], // right
+          [-1, -1], // up left
+          [-1, 1], // up right
+          [1, -1], // down left
+          [1, 1], // down right
         ];
 
         for (var direction in directions) {
@@ -309,7 +319,7 @@ class _GameBoardState extends State<GameBoard> {
             continue;
           }
           if (board[newRow][newCol] != null) {
-            if(board[newRow][newCol]!.isWhite != piece.isWhite) {
+            if (board[newRow][newCol]!.isWhite != piece.isWhite) {
               validMoves.add([newRow, newCol]); // kill
             }
             continue; // blocked

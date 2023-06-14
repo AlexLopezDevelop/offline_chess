@@ -48,11 +48,16 @@ class Square extends StatelessWidget {
 
     // update with isValidMove
 
-
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        color: squareColor,
+        margin: isValidMove ? const EdgeInsets.all(10) : null,
+        decoration: isValidMove
+            ? BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                color: squareColor,
+              )
+            : BoxDecoration(color: squareColor),
         child: piece != null
             ? Padding(
                 padding: const EdgeInsets.all(6.0),
