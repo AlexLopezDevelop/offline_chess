@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:offlinechess/components/piece.dart';
 import 'package:offlinechess/components/square.dart';
@@ -131,20 +129,16 @@ class _GameBoardState extends State<GameBoard> {
         selectedPieceRow = row;
         selectedPieceCol = col;
       }
-    });
-
-    // if a piece is selected, calculate its valid moves
-    if (selectedPiece != null) {
-      _calculateValidMoves(
+      validMoves = _calculateValidMoves(
           col: selectedPieceCol, row: selectedPieceRow, piece: selectedPiece);
-    }
+    });
   }
 
   List<List<int>> _calculateValidMoves(
       {required int row, required int col, required ChessPiece? piece}) {
     List<List<int>> validMoves = [];
 
-    int direction = piece!.isWhite ? 1 : -1;
+    int direction = piece!.isWhite ? -1 : 1;
 
     switch (piece.type) {
       case ChessPieceType.pawn:
@@ -155,7 +149,7 @@ class _GameBoardState extends State<GameBoard> {
 
         //pawn can move two squares forward if it is in its starting position
         if ((row == 1 && !piece.isWhite) || (row == 6 && piece.isWhite)) {
-          if (isInBoard(row + 2, col) &&
+          if (isInBoard(row + 2 * direction, col) &&
               board[row + 2 * direction][col] == null && board[row + direction][col] == null) {
             validMoves.add([row + 2 * direction, col]);
           }
@@ -205,8 +199,8 @@ class _GameBoardState extends State<GameBoard> {
 
               // check if square is a valid move
               bool isValidMove = false;
-              for (List<int> move in validMoves) {
-                if (move[0] == row && move[1] == col) {
+              for (var position in validMoves) {
+                if (position[0] == row && position[1] == col) {
                   isValidMove = true;
                   break;
                 }

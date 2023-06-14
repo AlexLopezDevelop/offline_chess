@@ -27,7 +27,7 @@ class Square extends StatelessWidget {
     if (isSelected) {
       squareColor = Colors.green;
     } else if (isValidMove) {
-      squareColor = Colors.green;
+      squareColor = Colors.green[200];
     } else {
       // if the square is not selected, color it according to its position
       // on the board
