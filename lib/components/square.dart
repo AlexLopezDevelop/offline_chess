@@ -27,7 +27,19 @@ class Square extends StatelessWidget {
     if (isSelected) {
       squareColor = Colors.green;
     } else if (isValidMove) {
-      squareColor = Colors.green[200];
+      if (index % 2 == 0) {
+        if (index ~/ kBoardWidth % 2 == 0) {
+          squareColor = squareColor = Colors.green[400];
+        } else {
+          squareColor = squareColor = Colors.green[200];
+        }
+      } else {
+        if (index ~/ kBoardWidth % 2 == 0) {
+          squareColor = squareColor = Colors.green[200];
+        } else {
+          squareColor = squareColor = Colors.green[400];
+        }
+      }
     } else {
       // if the square is not selected, color it according to its position
       // on the board
@@ -51,10 +63,8 @@ class Square extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: isValidMove ? const EdgeInsets.all(10) : null,
         decoration: isValidMove
             ? BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
                 color: squareColor,
               )
             : BoxDecoration(color: squareColor),
