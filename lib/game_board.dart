@@ -155,7 +155,7 @@ class _GameBoardState extends State<GameBoard> {
       }
 
       validMoves = _calculateRealValidMoves(
-          col: selectedPieceCol, row: selectedPieceRow, piece: selectedPiece!, checkSimulation: true);
+          col: selectedPieceCol, row: selectedPieceRow, piece: selectedPiece, checkSimulation: true);
     });
   }
 
@@ -345,7 +345,7 @@ class _GameBoardState extends State<GameBoard> {
   }
 
   List<List<int>> _calculateRealValidMoves({
-      required int row, required int col, required ChessPiece piece, required bool checkSimulation}) {
+      required int row, required int col, ChessPiece? piece, required bool checkSimulation}) {
     List<List<int>> realValidMoves = [];
     List<List<int>> candidatesMoves =
         _calculateRawValidMoves(row: row, col: col, piece: piece);
@@ -355,7 +355,7 @@ class _GameBoardState extends State<GameBoard> {
         final endRow = candidateMove[0];
         final endCol = candidateMove[1];
 
-        if (simulateMoveIsSafe(piece, row, col, endRow, endCol)) {
+        if (simulateMoveIsSafe(piece!, row, col, endRow, endCol)) {
           realValidMoves.add(candidateMove);
         }
       }
@@ -429,18 +429,16 @@ class _GameBoardState extends State<GameBoard> {
     // check if any enemy piece can kill king
     for (var row = 0; row < kBoardWidth; row++) {
       for (var col = 0; col < kBoardWidth; col++) {
-        if (board[row][col] == null ||
-            board[row][col]!.isWhite != isWhiteKing) {
-          continue;
-        }
-
-        List<List<int>> moves = _calculateRealValidMoves(
-            row: row, col: col, piece: board[row][col]!, checkSimulation: false);
-
-        // check if the king position is in this piece valid moves
-        if (moves.any((element) =>
-            element[0] == kingPosition[0] && element[1] == kingPosition[1])) {
-          return true;
+        final piece = board[row][col];
+        if (piece != null && piece.isWhite != isWhiteKing) {
+          List<List<int>> validMoves = _calculateRealValidMoves(
+              row: row, col: col, piece: piece, checkSimulation: false);
+          for (var validMove in validMoves) {
+            if (validMove[0] == kingPosition[0] &&
+                validMove[1] == kingPosition[1]) {
+              return true;
+            }
+          }
         }
       }
     }
