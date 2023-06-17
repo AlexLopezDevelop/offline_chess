@@ -194,7 +194,7 @@ class _GameBoardState extends State<GameBoard> {
         }
         if (isInBoard(row + direction, col + 1) &&
             board[row + direction][col + 1] != null &&
-            !board[row + direction][col + 1]!.isWhite != piece.isWhite) {
+            board[row + direction][col + 1]!.isWhite != piece.isWhite) {
           validMoves.add([row + direction, col + 1]);
         }
         break;
@@ -449,7 +449,7 @@ class _GameBoardState extends State<GameBoard> {
 
   bool simulateMoveIsSafe(ChessPiece piece, int startRow, int startCol, int endRow, int endCol) {
     // save current the current board state
-    ChessPiece? originalPiece = board[endRow][endCol];
+    ChessPiece? originalDestinationPiece = board[endRow][endCol];
 
     List<int>? originalKingPosition;
 
@@ -475,7 +475,7 @@ class _GameBoardState extends State<GameBoard> {
 
       // restore board to original state
       board[startRow][startCol] = piece;
-      board[endRow][endCol] = originalPiece;
+      board[endRow][endCol] = originalDestinationPiece;
 
       // if the piece was the king, restore it original position
       if (piece.type == ChessPieceType.king) {
