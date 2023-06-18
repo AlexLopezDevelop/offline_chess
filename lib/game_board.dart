@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 import 'package:offlinechess/components/dead_piece.dart';
 import 'package:offlinechess/components/piece.dart';
 import 'package:offlinechess/components/square.dart';
 import 'package:offlinechess/helper/movements.dart';
 import 'package:offlinechess/values/colors.dart';
+import 'package:quickalert/models/quickalert_type.dart';
+import 'package:quickalert/widgets/quickalert_dialog.dart';
 
 const kBoardWidth = 8;
 
@@ -35,6 +38,7 @@ class _GameBoardState extends State<GameBoard> {
   List<int> whiteKingPosition = [7, 4];
   List<int> blackKingPosition = [0, 4];
   bool checkStatus = false;
+  bool isCheckMate = false;
 
   @override
   void initState() {
@@ -155,7 +159,10 @@ class _GameBoardState extends State<GameBoard> {
       }
 
       validMoves = _calculateRealValidMoves(
-          col: selectedPieceCol, row: selectedPieceRow, piece: selectedPiece, checkSimulation: true);
+          col: selectedPieceCol,
+          row: selectedPieceRow,
+          piece: selectedPiece,
+          checkSimulation: true);
     });
   }
 
@@ -344,8 +351,11 @@ class _GameBoardState extends State<GameBoard> {
     return validMoves;
   }
 
-  List<List<int>> _calculateRealValidMoves({
-      required int row, required int col, ChessPiece? piece, required bool checkSimulation}) {
+  List<List<int>> _calculateRealValidMoves(
+      {required int row,
+      required int col,
+      ChessPiece? piece,
+      required bool checkSimulation}) {
     List<List<int>> realValidMoves = [];
     List<List<int>> candidatesMoves =
         _calculateRawValidMoves(row: row, col: col, piece: piece);
@@ -391,9 +401,13 @@ class _GameBoardState extends State<GameBoard> {
 
     // see if kings are in check
     if (_isKingInCheck(isWhiteTurn)) {
-      checkStatus = true;
+      setState(() {
+        checkStatus = true;
+      });
     } else {
-      checkStatus = false;
+      setState(() {
+        checkStatus = false;
+      });
     }
 
     // clear selection
@@ -405,17 +419,23 @@ class _GameBoardState extends State<GameBoard> {
     });
 
     // check if it is checkmate
-    if (isCheckMate(!isWhiteTurn)) {
-      showDialog(context: context, builder: (context) => AlertDialog(
-        title: const Text('Checkmate!'),
-        content: Text('Winner is ${isWhiteTurn ? 'Black' : 'White'}'),
-        actions: [
-          TextButton(onPressed: () {
-            Navigator.of(context).pop();
-            resetBoard();
-          }, child: const Text('Play Again'))
-        ],
-      ));
+    setState(() {
+      isCheckMate = _isCheckMate(!isWhiteTurn);
+    });
+    if (isCheckMate) {
+      QuickAlert.show(
+        context: context,
+        type: QuickAlertType.custom,
+        barrierDismissible: false,
+        confirmBtnText: 'Play Again',
+        customAsset: 'assets/trophy.png',
+        widget: const SizedBox(),
+        onConfirmBtnTap: () {
+          resetBoard();
+          Navigator.pop(context);
+        },
+        title: isWhiteTurn ? 'White Wins!' : 'Black Wins!',
+      );
     }
 
     // change turn
@@ -445,7 +465,8 @@ class _GameBoardState extends State<GameBoard> {
     return false;
   }
 
-  bool simulateMoveIsSafe(ChessPiece piece, int startRow, int startCol, int endRow, int endCol) {
+  bool simulateMoveIsSafe(
+      ChessPiece piece, int startRow, int startCol, int endRow, int endCol) {
     // save current the current board state
     ChessPiece? originalDestinationPiece = board[endRow][endCol];
 
@@ -454,7 +475,7 @@ class _GameBoardState extends State<GameBoard> {
     // if the piece is the king, save it's position and update new one
     if (piece.type == ChessPieceType.king) {
       originalKingPosition =
-      piece.isWhite ? whiteKingPosition : blackKingPosition;
+          piece.isWhite ? whiteKingPosition : blackKingPosition;
 
       // update king position
       if (piece.isWhite) {
@@ -464,30 +485,30 @@ class _GameBoardState extends State<GameBoard> {
       }
     }
 
-      // simulate move
-      board[endRow][endCol] = piece;
-      board[startRow][startCol] = null;
+    // simulate move
+    board[endRow][endCol] = piece;
+    board[startRow][startCol] = null;
 
-      // check if our king is under attack
-      bool kingInCheck = _isKingInCheck(piece.isWhite);
+    // check if our king is under attack
+    bool kingInCheck = _isKingInCheck(piece.isWhite);
 
-      // restore board to original state
-      board[startRow][startCol] = piece;
-      board[endRow][endCol] = originalDestinationPiece;
+    // restore board to original state
+    board[startRow][startCol] = piece;
+    board[endRow][endCol] = originalDestinationPiece;
 
-      // if the piece was the king, restore it original position
-      if (piece.type == ChessPieceType.king) {
-        if (piece.isWhite) {
-          whiteKingPosition = originalKingPosition!;
-        } else {
-          blackKingPosition = originalKingPosition!;
-        }
+    // if the piece was the king, restore it original position
+    if (piece.type == ChessPieceType.king) {
+      if (piece.isWhite) {
+        whiteKingPosition = originalKingPosition!;
+      } else {
+        blackKingPosition = originalKingPosition!;
       }
+    }
 
     return !kingInCheck;
   }
 
-  bool isCheckMate(bool isWhiteKing) {
+  bool _isCheckMate(bool isWhiteKing) {
     if (!_isKingInCheck(isWhiteKing)) {
       return false;
     }
@@ -513,78 +534,91 @@ class _GameBoardState extends State<GameBoard> {
   void resetBoard() {
     _initBoard();
     checkStatus = false;
+    isCheckMate = false;
     whiteCapturedPieces.clear();
     blackCapturedPieces.clear();
     whiteKingPosition = [0, 4];
     blackKingPosition = [7, 4];
     isWhiteTurn = true;
-    setState(() {
-    });
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
         backgroundColor: kBackgroundColor,
-        body: Column(
+        body: Stack(
           children: [
-            // white pieces taken
-            Expanded(
-                child: GridView.builder(
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 8),
-                    itemCount: whiteCapturedPieces.length,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemBuilder: (context, index) => DeadPiece(
-                          imagePath: whiteCapturedPieces[index].imagePath,
-                          isWhite: true,
-                        ))),
-            Text(checkStatus ? 'Check!' : ''),
-            Expanded(
-              flex: 3,
-              child: GridView.builder(
-                  itemCount: kBoardWidth * kBoardWidth,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 8),
-                  itemBuilder: (context, index) {
-                    int row = index ~/ kBoardWidth;
-                    int col = index % kBoardWidth;
-                    bool isSelected =
-                        selectedPieceRow == row && selectedPieceCol == col;
+            Column(
+              children: [
+                // white pieces taken
+                Expanded(
+                    child: GridView.builder(
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 8),
+                        itemCount: whiteCapturedPieces.length,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemBuilder: (context, index) => DeadPiece(
+                              imagePath: whiteCapturedPieces[index].imagePath,
+                              isWhite: true,
+                            ))),
+                Expanded(
+                  flex: 3,
+                  child: GridView.builder(
+                      itemCount: kBoardWidth * kBoardWidth,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 8),
+                      itemBuilder: (context, index) {
+                        int row = index ~/ kBoardWidth;
+                        int col = index % kBoardWidth;
+                        bool isSelected =
+                            selectedPieceRow == row && selectedPieceCol == col;
 
-                    // check if square is a valid move
-                    bool isValidMove = false;
-                    for (var position in validMoves) {
-                      if (position[0] == row && position[1] == col) {
-                        isValidMove = true;
-                        break;
-                      }
-                    }
+                        // check if square is a valid move
+                        bool isValidMove = false;
+                        for (var position in validMoves) {
+                          if (position[0] == row && position[1] == col) {
+                            isValidMove = true;
+                            break;
+                          }
+                        }
 
-                    return Center(
-                      child: Square(
-                        index: index,
-                        piece: board[row][col],
-                        isSelected: isSelected,
-                        isValidMove: isValidMove,
-                        onTap: () => _selectPiece(row, col),
-                      ),
-                    );
-                  }),
+                        return Center(
+                          child: Square(
+                            index: index,
+                            piece: board[row][col],
+                            isSelected: isSelected,
+                            isValidMove: isValidMove,
+                            onTap: () => _selectPiece(row, col),
+                          ),
+                        );
+                      }),
+                ),
+                Expanded(
+                    child: GridView.builder(
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 8),
+                        itemCount: blackCapturedPieces.length,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemBuilder: (context, index) => DeadPiece(
+                              imagePath: blackCapturedPieces[index].imagePath,
+                              isWhite: false,
+                            ))),
+              ],
             ),
-            Expanded(
-                child: GridView.builder(
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 8),
-                    itemCount: blackCapturedPieces.length,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemBuilder: (context, index) => DeadPiece(
-                          imagePath: blackCapturedPieces[index].imagePath,
-                          isWhite: false,
-                        ))),
+            if (isCheckMate)
+              Center(
+                  child: Lottie.asset(
+                'assets/lotties/confetti.json',
+                repeat: false,
+                height: MediaQuery.of(context).size.height,
+                width: MediaQuery.of(context).size.width,
+                fit: BoxFit.cover,
+              )),
           ],
         ));
   }
