@@ -2,7 +2,7 @@
 
 This is a chess game project developed in Flutter. It provides an intuitive and functional graphical interface for playing chess matches on mobile devices.
 
-![Simulator Screenshot - iPhone 14 Pro - 2023-06-18 at 11 46 32](https://github.com/AlexLopezDevelop/offline_chess/assets/32960226/8eee45f0-67b5-4f68-bc98-0eb6cfbdc74e){height="400"}
+![Simulator Screenshot - iPhone 14 Pro - 2023-06-18 at 11 46 32](https://github.com/AlexLopezDevelop/offline_chess/assets/32960226/8eee45f0-67b5-4f68-bc98-0eb6cfbdc74e | height=100)
 
 ![Simulator Screenshot - iPhone 14 Pro - 2023-06-18 at 11 46 20](https://github.com/AlexLopezDevelop/offline_chess/assets/32960226/82241dad-30f5-43a9-a6c3-c7decd34eeef){height="400"}
 
