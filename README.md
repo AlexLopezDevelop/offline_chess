@@ -4,6 +4,8 @@ This is a chess game project developed in Flutter. It provides an intuitive and 
 
 <img height="400" alt="chess" src="https://github.com/AlexLopezDevelop/offline_chess/assets/32960226/8eee45f0-67b5-4f68-bc98-0eb6cfbdc74e">
 
+<img height="400" alt="chess" src="https://github.com/AlexLopezDevelop/offline_chess/assets/32960226/3aeb5e77-6bfc-4c26-81e1-8bf2e1fb92ee">
+
 <img height="400" alt="chess" src="https://github.com/AlexLopezDevelop/offline_chess/assets/32960226/82241dad-30f5-43a9-a6c3-c7decd34eeef">
 
 <img height="400" alt="chess" src="https://github.com/AlexLopezDevelop/offline_chess/assets/32960226/f931f1d9-a5e4-43c4-ab88-951281588cf3">
